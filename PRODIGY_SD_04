@@ -1,0 +1,55 @@
+import tkinter as tk
+from tkinter import messagebox
+from bs4 import BeautifulSoup
+import requests
+import csv
+
+class ProductScraper(tk.Tk):
+    def __init__(self):
+        super().__init__()
+        self.title("Product Scraper")
+        
+        self.url_label = tk.Label(self, text="Enter e-commerce website URL:")
+        self.url_label.grid(row=0, column=0, sticky="w", padx=10, pady=5)
+        self.url_entry = tk.Entry(self, width=50)
+        self.url_entry.grid(row=0, column=1, padx=10, pady=5)
+        
+        self.start_button = tk.Button(self, text="Start Scraping", command=self.scrape_products)
+        self.start_button.grid(row=1, column=0, columnspan=2, pady=5)
+        
+        self.status_label = tk.Label(self, text="Status:")
+        self.status_label.grid(row=2, column=0, sticky="w", padx=10, pady=5)
+        self.status_display = tk.Text(self, width=50, height=10)
+        self.status_display.grid(row=2, column=1, padx=10, pady=5)
+        
+    def scrape_products(self):
+        url = self.url_entry.get()
+        if not url:
+            messagebox.showerror("Error", "Please enter a URL.")
+            return
+        
+        try:
+            response = requests.get(url)
+            soup = BeautifulSoup(response.content, "html.parser")
+            
+            products = []
+            for product in soup.find_all("div", class_="product"):
+                name = product.find("h2").text.strip()
+                price = product.find("span", class_="price").text.strip()
+                rating = product.find("span", class_="rating").text.strip()
+                products.append([name, price, rating])
+            
+            self.save_to_csv(products)
+            self.status_display.insert(tk.END, "Scraping complete. Data saved to CSV file.\n")
+        except Exception as e:
+            self.status_display.insert(tk.END, f"Error: {str(e)}\n")
+    
+    def save_to_csv(self, data):
+        with open("products.csv", "w", newline="", encoding="utf-8") as file:
+            writer = csv.writer(file)
+            writer.writerow(["Name", "Price", "Rating"])
+            writer.writerows(data)
+
+if __name__ == "__main__":
+    app = ProductScraper()
+    app.mainloop()
